@@ -14,6 +14,24 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # URL do arquivo list.json no repositório GitHub
 GITHUB_URL = 'https://raw.githubusercontent.com/Discord-AntiScam/scam-links/refs/heads/main/list.json'
 
+# Caminho para o arquivo de configuração persistente
+CONFIG_FILE = 'notification_channels.json'
+
+# Função para carregar dados persistentes
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as file:
+            return json.load(file)
+    return {}
+
+# Função para salvar dados persistentes
+def save_config():
+    with open(CONFIG_FILE, 'w', encoding='utf-8') as file:
+        json.dump(notification_channels, file, ensure_ascii=False, indent=4)
+
+# Carrega canais de notificação previamente configurados
+notification_channels = load_config()
+
 # Carrega a lista de links bloqueados do arquivo list.json
 def load_blocked_links():
     try:
@@ -29,9 +47,6 @@ def load_blocked_links():
 
 blocked_links = load_blocked_links()
 
-# Dicionário para armazenar o canal de notificação por servidor
-notification_channels = {}
-
 @bot.event
 async def on_ready():
     print(f'Bot {bot.user} está online!')
@@ -40,9 +55,10 @@ async def on_ready():
 @commands.has_permissions(administrator=True)
 async def definir_canal_notificar(ctx, channel: discord.TextChannel):
     """Comando para definir o canal de notificação."""
-    guild_id = ctx.guild.id
+    guild_id = str(ctx.guild.id)  # Converta para string para compatibilidade com JSON
     notification_channels[guild_id] = channel.id
 
+    save_config()  # Salva a configuração no arquivo
     await ctx.send(f"Canal de notificação definido para: {channel.mention}")
 
 @bot.event
@@ -57,7 +73,7 @@ async def on_message(message):
             print(f'Link bloqueado encontrado: {link}')
             try:
                 await message.delete()
-                guild_id = message.guild.id
+                guild_id = str(message.guild.id)
                 notification_channel_id = notification_channels.get(guild_id)
 
                 # Notifica no canal configurado, se existir
