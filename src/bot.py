@@ -55,12 +55,28 @@ async def load_blocked_links_async():
         try:
             async with session.get(GITHUB_URL, timeout=5, headers={"Accept": "application/json"}) as response:
                 text = await response.text()
-                return json.loads(text)
+                links = json.loads(text)
         except Exception as e:
             print(f"Erro ao baixar a lista de links bloqueados: {e}")
             file_path = os.path.join(os.path.dirname(__file__), 'utils', 'list.json')
             with open(file_path, 'r', encoding='utf-8') as file:
-                return json.load(file)
+                links = json.load(file)
+
+    # Carrega sempre a lista de links alternativa (altList.json)
+    alt_file_path = os.path.join(os.path.dirname(__file__), 'utils', 'altList.json')
+    try:
+        with open(alt_file_path, 'r', encoding='utf-8') as file:
+            alt_links = json.load(file)
+        if not isinstance(alt_links, list):
+            print("altList.json não contém uma lista válida.")
+            alt_links = []
+    except Exception as ex:
+        print(f"Erro ao carregar altList.json: {ex}")
+        alt_links = []
+
+    # Combina as duas listas removendo duplicatas
+    combined_links = list(set(links).union(set(alt_links)))
+    return combined_links
 
 # Variável global para armazenar a lista
 blocked_links = []
